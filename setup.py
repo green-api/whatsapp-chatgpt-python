@@ -29,4 +29,9 @@ setup(
         "openai>=1.66.3",
         "requests>=2.32.3"
     ],
+    extras_require={
+        "voice": [
+            "whatsapp-chatbot-python[voip]>=1.3.0; python_version >= '3.11'"
+        ]
+    },
 )

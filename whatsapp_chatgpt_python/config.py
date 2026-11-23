@@ -29,5 +29,25 @@ IMAGE_CAPABLE_MODELS = [
 
 ALL_MODELS = GPT4_MODELS + GPT4O_MODELS + GPT35_MODELS + O1_MODELS
 
+DEFAULT_REALTIME_MODEL = "gpt-realtime-2.1"
+DEFAULT_REALTIME_VOICE = "marin"
+DEFAULT_VOICE_GREETING = "Greet the caller briefly."
+DEFAULT_MAX_CALL_SECONDS = 600
+DEFAULT_RING_SECONDS = 60
+DEFAULT_ANSWER_SECONDS = 60
+DEFAULT_VAD_THRESHOLD = 0.7
+DEFAULT_VAD_PREFIX_PADDING_MS = 400
+DEFAULT_VAD_SILENCE_DURATION_MS = 800
+DEFAULT_VAD_NOISE_REDUCTION = "near_field"
+VOICE_CALL_LANGUAGE = "adaptive"
+VOICE_THREAD_NAME = "voice-calls"
+INCOMING_CALL_OFFER = "offer"
+INCOMING_CALL_END_STATUSES = ("declined", "missed", "hungUp", "hangUp")
+VOICE_MISSING_DEPENDENCIES = (
+    "Voice calls need Python 3.11 or newer and the optional dependencies, install them with: "
+    "pip install 'whatsapp-chatgpt-python[voice]'"
+)
+
+
 def is_image_capable_model(model: str) -> bool:
     return model in IMAGE_CAPABLE_MODELS

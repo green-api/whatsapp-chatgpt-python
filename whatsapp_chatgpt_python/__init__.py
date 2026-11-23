@@ -31,5 +31,6 @@ from .handlers import (
 )
 from .middleware import MiddlewareManager
 from .utils import Utils
+from .voice import VoiceActivityConfig, VoiceCallsConfig
 
 __version__ = "0.1.0"

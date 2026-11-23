@@ -118,6 +118,62 @@ bot = WhatsappGptBot(
 bot.run_forever()
 ```
 
+## Голосовые звонки
+
+Бот может отвечать на голосовые звонки WhatsApp и звонить сам, разговаривая с человеком через модель OpenAI Realtime.
+Речь звонящего идёт в модель, речь модели идёт в звонок, звонящий может перебить модель. Для звонков нужен Python 3.11
+или новее, тариф GREEN-API со звонками и дополнительные зависимости:
+
+```bash
+pip install 'whatsapp-chatgpt-python[voice]'
+```
+
+```python
+import re
+from whatsapp_chatgpt_python import WhatsappGptBot, VoiceCallsConfig
+
+bot = WhatsappGptBot(
+    id_instance="your-instance-id",
+    api_token_instance="your-api-token",
+    openai_api_key="your-openai-api-key",
+    system_message="You are a helpful assistant of a coffee shop.",
+    voice_calls=VoiceCallsConfig(
+        voice="marin",
+        greeting="Greet the caller and ask how you can help.",
+    ),
+)
+
+
+@bot.router.message(regexp=(r"call me", re.IGNORECASE))
+def call_me(notification):
+    bot.voice_call(notification.chat)
+
+
+bot.run_forever()
+```
+
+- С заданным `voice_calls` бот отвечает на входящие звонки через модель. Чтобы только звонить, укажите
+  `answer_incoming=False`. Если уведомления о входящих звонках выключены и `settings` не переданы, бот включает их при
+  запуске.
+- `bot.voice_call(chat_id)` звонит в чат и начинает разговор, когда человек ответит. Исходящие звонки работают только в
+  чаты, которые писали или звонили за последние 72 часа. `bot.in_voice_call` показывает, идёт ли сейчас звонок.
+- Одновременно идёт один звонок, в отдельном потоке, поэтому во время звонка бот продолжает отвечать на сообщения.
+- Звонок заканчивается, когда человек кладёт трубку, или через `max_call_seconds`.
+
+```python
+@dataclass
+class VoiceCallsConfig:
+    model: str = "gpt-realtime-2.1"
+    voice: str = "marin"  # marin, cedar, alloy, ash, ballad, coral, echo, sage, shimmer, verse
+    instructions: Optional[str] = None  # system_message by default
+    greeting: str = "Greet the caller briefly."
+    answer_incoming: bool = True
+    max_call_seconds: float = 600
+    ring_seconds: float = 60
+    vad: VoiceActivityConfig = VoiceActivityConfig()  # threshold 0.7, prefix_padding_ms 400,
+    # silence_duration_ms 800, noise_reduction "near_field", "far_field" or None
+```
+
 ## Обработка сообщений
 
 Бот автоматически обрабатывает различные типы сообщений WhatsApp и преобразует их в формат, понятный моделям OpenAI.

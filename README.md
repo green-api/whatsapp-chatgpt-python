@@ -118,6 +118,61 @@ bot = WhatsappGptBot(
 bot.run_forever()
 ```
 
+## Voice Calls
+
+The bot can answer and make WhatsApp voice calls and talk with the person through an OpenAI Realtime model. The
+caller's speech goes to the model, the model's speech goes into the call, and the caller can interrupt the model.
+Calls need Python 3.11 or newer, a GREEN-API plan with calls and the optional dependencies:
+
+```bash
+pip install 'whatsapp-chatgpt-python[voice]'
+```
+
+```python
+import re
+from whatsapp_chatgpt_python import WhatsappGptBot, VoiceCallsConfig
+
+bot = WhatsappGptBot(
+    id_instance="your-instance-id",
+    api_token_instance="your-api-token",
+    openai_api_key="your-openai-api-key",
+    system_message="You are a helpful assistant of a coffee shop.",
+    voice_calls=VoiceCallsConfig(
+        voice="marin",
+        greeting="Greet the caller and ask how you can help.",
+    ),
+)
+
+
+@bot.router.message(regexp=(r"call me", re.IGNORECASE))
+def call_me(notification):
+    bot.voice_call(notification.chat)
+
+
+bot.run_forever()
+```
+
+- With `voice_calls` set, the bot answers incoming calls with the model. Set `answer_incoming=False` to only make
+  calls. If incoming call notifications are off and no `settings` are passed, the bot turns them on at start.
+- `bot.voice_call(chat_id)` calls a chat and starts the conversation when the person answers. Outgoing calls work only
+  to chats that wrote or called in the last 72 hours. `bot.in_voice_call` tells whether a call is running.
+- One call runs at a time, on its own thread, so the bot keeps answering messages during a call.
+- The call ends when the person hangs up or after `max_call_seconds`.
+
+```python
+@dataclass
+class VoiceCallsConfig:
+    model: str = "gpt-realtime-2.1"
+    voice: str = "marin"  # marin, cedar, alloy, ash, ballad, coral, echo, sage, shimmer, verse
+    instructions: Optional[str] = None  # system_message by default
+    greeting: str = "Greet the caller briefly."
+    answer_incoming: bool = True
+    max_call_seconds: float = 600
+    ring_seconds: float = 60
+    vad: VoiceActivityConfig = VoiceActivityConfig()  # threshold 0.7, prefix_padding_ms 400,
+    # silence_duration_ms 800, noise_reduction "near_field", "far_field" or None
+```
+
 ## Message Handling
 
 The bot automatically handles different types of WhatsApp messages and converts them into a format understood by

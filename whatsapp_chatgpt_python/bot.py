@@ -3,15 +3,22 @@ Main WhatsApp GPT Bot class
 """
 import logging
 import time
-from typing import Dict, Type, Callable
+from typing import Dict, Type, Callable, Optional
 import openai
 from whatsapp_chatbot_python import GreenAPIBot, Notification
 
-from .config import DEFAULT_MODEL, ALL_MODELS, is_image_capable_model
+from .config import (
+    DEFAULT_MODEL,
+    ALL_MODELS,
+    INCOMING_CALL_END_STATUSES,
+    INCOMING_CALL_OFFER,
+    is_image_capable_model,
+)
 from .models import GPTSessionData
 from .middleware import MiddlewareManager
 from .handlers import MessageHandler, MessageHandlerRegistry
 from .utils.router import setup_router_integration
+from .voice import VoiceCalls, VoiceCallsConfig
 
 logger = logging.getLogger('whatsapp_chatgpt_python')
 
@@ -30,6 +37,7 @@ class WhatsappGptBot(GreenAPIBot):
             temperature: float = 0.5,
             error_message: str = "Sorry, I encountered an error processing your message. Please try again.",
             session_timeout: int = 1800,  # 30 minutes
+            voice_calls: Optional[VoiceCallsConfig] = None,
             **kwargs
     ):
         """
@@ -45,6 +53,7 @@ class WhatsappGptBot(GreenAPIBot):
             temperature: Temperature for response generation
             error_message: Message to send when an error occurs
             session_timeout: Timeout for inactive sessions in seconds
+            voice_calls: Voice calls with an OpenAI Realtime model. Without it the bot does not answer calls
             **kwargs: Additional arguments to pass to GreenAPIBot
         """
         super().__init__(id_instance, api_token_instance, **kwargs)
@@ -66,7 +75,51 @@ class WhatsappGptBot(GreenAPIBot):
 
         setup_router_integration(self)
 
+        self._voice: Optional[VoiceCalls] = None
+        if voice_calls is not None:
+            self._voice = VoiceCalls(
+                self.api.host, id_instance, api_token_instance, openai_api_key, voice_calls, system_message
+            )
+            if voice_calls.answer_incoming:
+                if not kwargs.get("settings"):
+                    self._enable_incoming_call_webhook()
+                self.router.incoming_call()(self._answer_with_voice)
+
         logger.info(f"WhatsApp GPT Bot initialized with model {model}")
+
+    def voice_call(self, chat_id: str) -> None:
+        """
+        Call a chat and talk with the person through the OpenAI Realtime model when they answer.
+        The call runs in the background. Outgoing calls work only to chats that wrote or called in the last 72 hours.
+
+        Args:
+            chat_id: Chat to call
+        """
+        if self._voice is None:
+            raise RuntimeError("Voice calls are not configured, pass voice_calls to the bot")
+        self._voice.call(chat_id)
+
+    @property
+    def in_voice_call(self) -> bool:
+        """Whether a voice conversation with the model is running now"""
+        return self._voice is not None and self._voice.busy
+
+    def _answer_with_voice(self, notification) -> None:
+        call = notification.call
+        if call.status in INCOMING_CALL_END_STATUSES and call.call_id:
+            self._voice.caller_left(call.call_id)
+            return
+        if call.status != INCOMING_CALL_OFFER or not call.sender or not call.call_id or self._voice.busy:
+            return
+        try:
+            self._voice.answer(call.sender, call.call_id, call.timestamp)
+        except Exception as e:
+            logger.error(f"Voice call failed: {e}")
+
+    def _enable_incoming_call_webhook(self) -> None:
+        settings = self.api.account.getSettings().data or {}
+        if settings.get("incomingCallWebhook") != "yes":
+            self.api.account.setSettings({"incomingCallWebhook": "yes"})
 
     def process_chat_sync(self, notification: Notification) -> None:
         """
