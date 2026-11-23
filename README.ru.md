@@ -170,7 +170,7 @@ class VoiceCallsConfig:
     answer_incoming: bool = True
     max_call_seconds: float = 600
     ring_seconds: float = 60
-    vad: VoiceActivityConfig = VoiceActivityConfig()  # threshold 0.7, prefix_padding_ms 400,
+    vad: VoiceActivityConfig = VoiceActivityConfig()  # threshold 0.5, prefix_padding_ms 400,
     # silence_duration_ms 800, noise_reduction "near_field", "far_field" or None
 ```
 
