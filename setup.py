@@ -9,7 +9,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="whatsapp-chatgpt-python",
-    version="1.0.0",
+    version="1.1.0",
     author="GREEN-API",
     author_email="support@green-api.com",
     description="A modern WhatsApp bot library with OpenAI GPT integration on Python",
